@@ -1,22 +1,42 @@
-import asyncio
-import logging
-import sys
-from os import getenv
+import asyncio, logging, sys
 from config import BOT_TOKEN
 
-from aiogram import Bot, Dispatcher, html
+from aiogram import Bot, Dispatcher, F, Router, html
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 from aiogram.filters import CommandStart
 from aiogram.types import Message
-# Bot token can be obtained via https://t.me/BotFather
-#TOKEN = getenv(BOT_TOKEN)
+from aiogram.client.default import DefaultBotProperties
+from aiogram.enums import ParseMode
+from aiogram.filters import Command, CommandStart
+from aiogram.fsm.context import FSMContext
+from aiogram.fsm.state import State, StatesGroup
+from aiogram.types import (
+    KeyboardButton,
+    Message,
+    ReplyKeyboardMarkup,
+    ReplyKeyboardRemove,
+)
 
-# All handlers should be attached to the Router (or Dispatcher)
+
+class Form(StatesGroup):
+    Header = State()
+    Text = State()
+    link_text = State()
+    link_url = State()
 
 dp = Dispatcher()
 
 
+
+
+@form_router.message(CommandStart())
+async def command_start(message: Message, state: FSMContext) -> None:
+    await state.set_state(Form.name)
+    await message.answer(
+        "Hi there! What's your name?",
+        reply_markup=ReplyKeyboardRemove(),
+    )
 @dp.message(CommandStart())
 async def command_start_handler(message: Message) -> None:
     """
