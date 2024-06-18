@@ -1,15 +1,12 @@
 import asyncio, logging, sys
 from config import BOT_TOKEN
 
-from aiogram import Bot, Dispatcher, F, Router, html, types
+from aiogram import Bot, Dispatcher, html, types
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 from aiogram.filters import CommandStart
-from aiogram.types import Message
-from aiogram.client.default import DefaultBotProperties
-from aiogram.enums import ParseMode
-from aiogram.filters import Command, CommandStart
 from aiogram.fsm.context import FSMContext
+from aiogram.filters.command import Command
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import (
     KeyboardButton,
@@ -36,7 +33,7 @@ class Form(StatesGroup):
     link_url = State()
 
 dp = Dispatcher()
-
+bot = Bot(token=BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
 
 @dp.message(CommandStart())
 async def command_start(message: Message, state: FSMContext) -> None:
@@ -75,11 +72,32 @@ async def process_like_write_bots(message: Message, state: FSMContext) -> None:
     await message.answer(f'{headers[int(data["header"])]}\n{data["text"]}',
                          reply_markup = get_keyboard(data["link_text"], data["link_url"]))
     await state.clear()
+    ###прописать постинг и автоудаление
+    name_group = -1002182879621
+    msg = await bot.send_message(text=f'{headers[int(data["header"])]}\n{data["text"]}',
+                         reply_markup = get_keyboard(data["link_text"], data["link_url"]), chat_id=name_group)
+    await message.answer("1")
+    await asyncio.sleep(10)
+    await message.answer("10")
+    await asyncio.sleep(20)
+    await message.answer("20")
+    await asyncio.sleep(20)
+    await msg.delete()
+
+
+
+
+@dp.message(Command("123"))
+async def test(message: types.Message) -> None:
+    ###прописать постинг и автоудаление
+    name_group = -1002182879621
+    await message.reply("123")
+    await bot.send_message(text="123", chat_id=name_group)
 
 
 
 async def main() -> None:
-    bot = Bot(token=BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
+
     await dp.start_polling(bot)
 
 
