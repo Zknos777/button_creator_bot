@@ -8,12 +8,7 @@ from aiogram.filters import CommandStart
 from aiogram.fsm.context import FSMContext
 from aiogram.filters.command import Command
 from aiogram.fsm.state import State, StatesGroup
-from aiogram.types import (
-    KeyboardButton,
-    Message,
-    ReplyKeyboardMarkup,
-    ReplyKeyboardRemove,
-)
+from aiogram.types import Message
 
 
 headers = {1: "Shapochka 1",
@@ -72,32 +67,16 @@ async def process_like_write_bots(message: Message, state: FSMContext) -> None:
     await message.answer(f'{headers[int(data["header"])]}\n{data["text"]}',
                          reply_markup = get_keyboard(data["link_text"], data["link_url"]))
     await state.clear()
-    ###прописать постинг и автоудаление
-    name_group = -1002182879621
+    ###постинг и автоудаление
+    name_group = -1002182879621 ## ID group
     msg = await bot.send_message(text=f'{headers[int(data["header"])]}\n{data["text"]}',
                          reply_markup = get_keyboard(data["link_text"], data["link_url"]), chat_id=name_group)
     await message.answer("1")
-    await asyncio.sleep(10)
-    await message.answer("10")
-    await asyncio.sleep(20)
-    await message.answer("20")
-    await asyncio.sleep(20)
-    await msg.delete()
-
-
-
-
-@dp.message(Command("123"))
-async def test(message: types.Message) -> None:
-    ###прописать постинг и автоудаление
-    name_group = -1002182879621
-    await message.reply("123")
-    await bot.send_message(text="123", chat_id=name_group)
-
+    await asyncio.sleep(20) ## timeout of delete message
+    await msg.delete() ### удаляет сообщение
 
 
 async def main() -> None:
-
     await dp.start_polling(bot)
 
 
