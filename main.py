@@ -1,7 +1,7 @@
 import asyncio, logging, sys
 from config import BOT_TOKEN
-
-from aiogram import Bot, Dispatcher, html, types
+from utils import kb_create
+from aiogram import Bot, Dispatcher, html, types, F
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 from aiogram.filters import CommandStart
@@ -74,6 +74,29 @@ async def process_like_write_bots(message: Message, state: FSMContext) -> None:
     await message.answer("1")
     await asyncio.sleep(20) ## timeout of delete message
     await msg.delete() ### удаляет сообщение
+
+
+@dp.message(Command("Headers", "headers"))
+async def show_headers(message: Message):
+    for k,v in headers.items():
+        await message.answer(f'{k} - {v}', reply_markup=get_keyboard("Изменить шапку",
+                                                                     "http://google.ru"))
+    await message.answer(reply_markup=kb_create("Создать новую", "Удалить"))
+
+
+@dp.message(F.Text == "удалить")
+async def delete_header(message: Message):
+    await message.answer("Какую шапку удалить?")
+
+
+@dp.message(F.Text.lower() == "создать новую")
+async def create_header(message: Message):
+    await message.answer("Введите текст новой шапки")
+
+
+# @dp.message(Command("Edit", "edit"))
+# async def show_headers(message: Message):
+#     await message.answer(f'{k} - {v}')
 
 
 async def main() -> None:
