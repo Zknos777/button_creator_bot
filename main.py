@@ -9,11 +9,22 @@ from aiogram.fsm.context import FSMContext
 from aiogram.filters.command import Command
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import Message
+from aiogram.utils.keyboard import ReplyKeyboardBuilder
 
 
 headers = {1: ("Shapochka 1", "Text_knopki1"),
            2: ("Shapochka 2 gde est odin i tot je text!", "Text_knopki2"),
-           3: ("Shapochka 3 gde toje est odin i tot je text!", "Text_knopki2")}
+           3: ("Shapochka 3 gde toje est odin i tot je text!", "Text_knopki3"),
+           4: ("Shapochka 4", "Text_knopki4"),
+           5: ("Shapochka 5 gde est odin i tot je text!", "Text_knopki5"),
+           6: ("Shapochka 6 gde toje est odin i tot je text!", "Text_knopki6"),
+           7: ("Shapochka 7", "Text_knopki7"),
+           8: ("Shapochka 8 gde est odin i tot je text!", "Text_knopki8"),
+           9: ("Shapochka 9 gde toje est odin i tot je text!", "Text_knopki9"),
+           10: ("Shapochka 10", "Text_knopki10"),
+           11: ("Shapochka 11 gde est odin i tot je text!", "Text_knopki11"),
+           12: ("Shapochka 12 gde toje est odin i tot je text!", "Text_knopki12")
+           }
 
 
 def get_keyboard(text_button, link_button):
@@ -33,9 +44,14 @@ bot = Bot(token=BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTM
 @dp.message(CommandStart())
 async def command_start(message: Message, state: FSMContext) -> None:
     await state.set_state(Form.header)
-    buttons = [[types.KeyboardButton(text=str(button))] for button in list(headers.keys())]
-    keyboard = types.ReplyKeyboardMarkup(keyboard=buttons)
-    await message.answer("Привет. Выбери шапку сообщений!", reply_markup=keyboard)
+    builder = ReplyKeyboardBuilder()
+    for key in list(headers.keys()): ## Все кнопки из ключей в словаре
+        builder.add(types.KeyboardButton(text=str(key)))
+    builder.adjust(4) #делаем по 4 кнопки на строку
+    await message.answer(
+        "Привет. Выбери шапку сообщений!",
+        reply_markup=builder.as_markup(resize_keyboard=True),
+    )
 
 
 @dp.message(Form.header)
