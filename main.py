@@ -11,9 +11,9 @@ from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import Message
 
 
-headers = {1: "Shapochka 1",
-           2: "Shapochka 2 gde est odin i tot je text!",
-           3: "Shapochka 3 gde toje est odin i tot je text!"}
+headers = {1: ("Shapochka 1", "Text_knopki1"),
+           2: ("Shapochka 2 gde est odin i tot je text!", "Text_knopki2"),
+           3: ("Shapochka 3 gde toje est odin i tot je text!", "Text_knopki2")}
 
 
 def get_keyboard(text_button, link_button):
@@ -33,27 +33,24 @@ bot = Bot(token=BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTM
 @dp.message(CommandStart())
 async def command_start(message: Message, state: FSMContext) -> None:
     await state.set_state(Form.header)
-    await message.answer("Привет. Выбери шапку сообщений!")
+    buttons = [[types.KeyboardButton(text=str(button))] for button in list(headers.keys())]
+    keyboard = types.ReplyKeyboardMarkup(keyboard=buttons)
+    await message.answer("Привет. Выбери шапку сообщений!", reply_markup=keyboard)
 
 
 @dp.message(Form.header)
 async def process_name(message: Message, state: FSMContext) -> None:
     await state.update_data(header=message.text)
-    await state.set_state(Form.text)
+    await state.set_state(Form.link_text)
     await message.answer(
         f"Отлично, {html.quote(message.text)}!\nКакой текст соообщения?",
+        reply_markup=types.ReplyKeyboardRemove()
     )
-
-@dp.message(Form.text)
-async def process_like_write_bots(message: Message, state: FSMContext) -> None:
-    await state.update_data(text=message.text)
-    await state.set_state(Form.link_text)
-    await message.reply("Текст ссылки?")
 
 
 @dp.message(Form.link_text)
 async def process_like_write_bots(message: Message, state: FSMContext) -> None:
-    await state.update_data(link_text=message.text)
+    await state.update_data(text=message.text)
     await state.set_state(Form.link_url)
     await message.reply("Линк ссылки?")
 
@@ -64,13 +61,13 @@ async def process_like_write_bots(message: Message, state: FSMContext) -> None:
     await state.set_state(Form.link_url)
     await message.reply("Готово всё!")
     data = await state.get_data()
-    await message.answer(f'{headers[int(data["header"])]}\n{data["text"]}',
-                         reply_markup = get_keyboard(data["link_text"], data["link_url"]))
+    await message.answer(f'{headers[int(data["header"])][0]}\n{data["text"]}',
+                         reply_markup = get_keyboard(headers[int(data["header"])][1], data["link_url"]))
     await state.clear()
     ###постинг и автоудаление
     name_group = -1002182879621 ## ID group
-    msg = await bot.send_message(text=f'{headers[int(data["header"])]}\n{data["text"]}',
-                         reply_markup = get_keyboard(data["link_text"], data["link_url"]), chat_id=name_group)
+    msg = await bot.send_message(text=f'{headers[int(data["header"])][0]}\n{data["text"]}',
+                         reply_markup = get_keyboard(headers[int(data["header"])][1], data["link_url"]), chat_id=name_group)
     await message.answer("1")
     await asyncio.sleep(20) ## timeout of delete message
     await msg.delete() ### удаляет сообщение
