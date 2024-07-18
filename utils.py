@@ -13,3 +13,9 @@ def kb_create(*args):
         input_field_placeholder="Выберите способ подачи"
     )
     return keyboard
+
+
+def get_keyboard(text_button, link_button):
+    buttons = [types.InlineKeyboardButton(text=text_button, url=link_button)],
+    keyboard = types.InlineKeyboardMarkup(inline_keyboard=buttons)
+    return keyboard

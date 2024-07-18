@@ -1,6 +1,6 @@
 import asyncio, logging, sys
 from config import BOT_TOKEN
-from utils import kb_create
+from utils import kb_create, get_keyboard
 from aiogram import Bot, Dispatcher, html, types, F
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
@@ -27,23 +27,20 @@ headers = {1: ("Shapochka 1", "Text_knopki1"),
            }
 
 
-def get_keyboard(text_button, link_button):
-    buttons = [types.InlineKeyboardButton(text=text_button, url=link_button)],
-    keyboard = types.InlineKeyboardMarkup(inline_keyboard=buttons)
-    return keyboard
+
 
 class Form(StatesGroup):
-    header = State()
+    choose_header = State()
     text = State()
-    link_text = State()
+    finish = State()
     link_url = State()
+    header_edit = State()
 
 dp = Dispatcher()
 bot = Bot(token=BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
 
 @dp.message(CommandStart())
 async def command_start(message: Message, state: FSMContext) -> None:
-    await state.set_state(Form.header)
     builder = ReplyKeyboardBuilder()
     for key in list(headers.keys()): ## Все кнопки из ключей в словаре
         builder.add(types.KeyboardButton(text=str(key)))
@@ -52,41 +49,41 @@ async def command_start(message: Message, state: FSMContext) -> None:
         "Привет. Выбери шапку сообщений!",
         reply_markup=builder.as_markup(resize_keyboard=True),
     )
+    await state.set_state(Form.text)
 
 
-@dp.message(Form.header)
+@dp.message(Form.text)
 async def process_name(message: Message, state: FSMContext) -> None:
     await state.update_data(header=message.text)
-    await state.set_state(Form.link_text)
     await message.answer(
         f"Отлично, {html.quote(message.text)}!\nКакой текст соообщения?",
         reply_markup=types.ReplyKeyboardRemove()
     )
-
-
-@dp.message(Form.link_text)
-async def process_like_write_bots(message: Message, state: FSMContext) -> None:
-    await state.update_data(text=message.text)
     await state.set_state(Form.link_url)
-    await message.reply("Линк ссылки?")
 
 
 @dp.message(Form.link_url)
 async def process_like_write_bots(message: Message, state: FSMContext) -> None:
+    await state.update_data(text=message.text)
+    await message.reply("Укажите адресс ссылки")
+    await state.set_state(Form.finish)
+
+
+@dp.message(Form.finish)
+async def process_like_write_bots(message: Message, state: FSMContext) -> None:
     await state.update_data(link_url=message.text)
-    await state.set_state(Form.link_url)
     await message.reply("Готово всё!")
     data = await state.get_data()
     await message.answer(f'{headers[int(data["header"])][0]}\n{data["text"]}',
                          reply_markup = get_keyboard(headers[int(data["header"])][1], data["link_url"]))
-    await state.clear()
     ###постинг и автоудаление
     name_group = -1002182879621 ## ID group
     msg = await bot.send_message(text=f'{headers[int(data["header"])][0]}\n{data["text"]}',
-                         reply_markup = get_keyboard(headers[int(data["header"])][1], data["link_url"]), chat_id=name_group)
-    await message.answer("1")
+                                reply_markup = get_keyboard(headers[int(data["header"])][1], data["link_url"]),
+                                chat_id=name_group)
     await asyncio.sleep(20) ## timeout of delete message
     await msg.delete() ### удаляет сообщение
+    await state.clear()
 
 
 @dp.message(Command("Headers", "headers"))
@@ -107,9 +104,17 @@ async def create_header(message: Message):
     await message.answer("Введите текст новой шапки")
 
 
-# @dp.message(Command("Edit", "edit"))
-# async def show_headers(message: Message):
-#     await message.answer(f'{k} - {v}')
+@dp.message(Command("edit")) ## Изменние шапки и текста
+async def edit_header(message: Message, state: FSMContext):
+    await state.set_state(Form.header_edit)
+    builder = ReplyKeyboardBuilder()
+    for key in list(headers.keys()):  ## Все кнопки из ключей в словаре
+        builder.add(types.KeyboardButton(text=str(key)))
+    builder.adjust(4)  # делаем по 4 кнопки на строку
+    await message.answer(
+        "Выбери шапку сообщений для изменения!",
+        reply_markup=builder.as_markup(resize_keyboard=True),
+    )
 
 
 async def main() -> None:
