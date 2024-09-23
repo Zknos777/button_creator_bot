@@ -1,5 +1,5 @@
 import asyncio, logging, sys, json
-from config import BOT_TOKEN
+from aiogram.utils.i18n import gettext as _
 from utils import kb_create, get_keyboard
 from aiogram import Bot, Dispatcher, html, types, F
 from aiogram.client.default import DefaultBotProperties
@@ -10,7 +10,11 @@ from aiogram.filters.command import Command
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import Message
 from aiogram.utils.keyboard import ReplyKeyboardBuilder
+from aiogram import Router
+from aiogram.types import Message
 
+logger = logging.getLogger(__name__)
+router: Router = Router(name="start")
 
 # headers = {"1": ("Shapochka 1", "Text_knopki1"),
 #            "2": ("Shapochka 2 gde est odin i tot je text!", "Text_knopki2"),
@@ -44,14 +48,28 @@ class Form(StatesGroup):
     header_del = State()
     edit_new_number = State()
 
-dp = Dispatcher()
-bot = Bot(token=BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
 
-@dp.message(Command("stop"))
+@router.message(CommandStart())
+async def start_handler(message: types.Message) -> None:
+    """Welcome message."""
+    await message.answer(_("first message"))
+@router.message(Command("stop"))
 async def stop(message: Message, state: FSMContext):
     await state.clear()
 
-@dp.message(CommandStart())
+@router.message(Command("edit")) ## Изменние шапки и текста
+async def edit_header(message: Message, state: FSMContext):
+    builder = ReplyKeyboardBuilder()
+    for key in list(headers.keys()):  ## Все кнопки из ключей в словаре
+        builder.add(types.KeyboardButton(text=str(key)))
+    builder.adjust(4)  # делаем по 4 кнопки на строку
+    await message.answer(
+        "Выбери шапку сообщений для изменения!",
+        reply_markup=builder.as_markup(resize_keyboard=True),
+    )
+    await state.set_state(Form.edit_new_number)
+
+@router.message(CommandStart())
 async def command_start(message: Message, state: FSMContext) -> None:
     builder = ReplyKeyboardBuilder()
     for key in list(headers.keys()): ## Все кнопки из ключей в словаре
@@ -64,7 +82,7 @@ async def command_start(message: Message, state: FSMContext) -> None:
     await state.set_state(Form.text)
 
 
-@dp.message(Form.text)
+@router.message(Form.text)
 async def process_name(message: Message, state: FSMContext) -> None:
     await state.update_data(header=message.text)
     await message.answer(
@@ -74,14 +92,14 @@ async def process_name(message: Message, state: FSMContext) -> None:
     await state.set_state(Form.link_url)
 
 
-@dp.message(Form.link_url)
+@router.message(Form.link_url)
 async def process_like_write_bots(message: Message, state: FSMContext) -> None:
     await state.update_data(text=message.text)
     await message.reply("Укажите адресс ссылки")
     await state.set_state(Form.finish)
 
 
-@dp.message(Form.finish)
+@router.message(Form.finish)
 async def process_like_write_bots(message: Message, state: FSMContext) -> None:
     await state.update_data(link_url=message.text)
     await message.reply("Готово всё!")
@@ -98,7 +116,7 @@ async def process_like_write_bots(message: Message, state: FSMContext) -> None:
     await state.clear()
 
 
-@dp.message(Command("del"))
+@router.message(Command("del"))
 async def delete_header(message: Message, state: FSMContext):
     builder = ReplyKeyboardBuilder()
     for key in list(headers.keys()):  ## Все кнопки из ключей в словаре
@@ -109,7 +127,7 @@ async def delete_header(message: Message, state: FSMContext):
     await state.set_state(Form.header_del)
 
 
-@dp.message(Form.header_del)
+@router.message(Form.header_del)
 async def delete_header_handler(message: Message, state: FSMContext) -> None:
     if message.text in headers.keys():
         del headers[str(message.text)]
@@ -122,12 +140,12 @@ async def delete_header_handler(message: Message, state: FSMContext) -> None:
         await state.clear()
 
 
-# @dp.message(Command("new"))
+# @router.message(Command("new"))
 # async def create_header(message: Message):
 #     await message.answer("Введите текст новой шапки")
 
 
-@dp.message(Command("edit")) ## Изменние шапки и текста
+@router.message(Command("edit")) ## Изменние шапки и текста
 async def edit_header(message: Message, state: FSMContext):
     builder = ReplyKeyboardBuilder()
     for key in list(headers.keys()):  ## Все кнопки из ключей в словаре
@@ -139,20 +157,20 @@ async def edit_header(message: Message, state: FSMContext):
     )
     await state.set_state(Form.edit_new_number)
 
-@dp.message(Form.edit_new_number)
+@router.message(Form.edit_new_number)
 async def edit_header_handler(message: Message, state: FSMContext) -> None:
     await state.update_data(edit_new_number=message.text)
     await message.reply("Укажите новый текст шапки")
     await state.set_state(Form.edit_new_text)
 
 
-@dp.message(Form.edit_new_text)
+@router.message(Form.edit_new_text)
 async def edit_header_handler(message: Message, state: FSMContext) -> None:
     await state.update_data(edit_new_text=message.text)
     await message.reply("Укажите новый текст кнопки")
     await state.set_state(Form.edit_new_link)
 
-@dp.message(Form.edit_new_link)
+@router.message(Form.edit_new_link)
 async def edit_header_handler(message: Message, state: FSMContext) -> None:
         await state.update_data(edit_new_link=message.text)
         await state.set_state(Form.edit_new_link)
@@ -166,11 +184,23 @@ async def edit_header_handler(message: Message, state: FSMContext) -> None:
 
 
 
+async def main():
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(filename)s:%(lineno)d #%(levelname)-8s "
+        "[%(asctime)s] - %(name)s - %(message)s",
+    )
 
-async def main() -> None:
+    logger.info("Starting bot")
+    bot: Bot = Bot(token="7411995656:AAGqJW5nYm8iDMhd-iQOd0WdK1Si3Auk79Q")
+    dp: Dispatcher = Dispatcher()
+
+    await bot.delete_webhook(drop_pending_updates=True)
     await dp.start_polling(bot)
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO, stream=sys.stdout)
-    asyncio.run(main())
+    try:
+        asyncio.run(main())
+    except (KeyboardInterrupt, SystemExit):
+        logger.info("Bot stopped")
