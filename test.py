@@ -128,7 +128,7 @@ async def command_start_handler(message: Message, state: FSMContext) -> None:
     await state.set_state(Form.text)
 
 
-@dp.message(Form.text, ~StateFilter(default_state))
+@dp.message(Form.text)
 async def process_name(message: Message, state: FSMContext) -> None:
     await state.update_data(header=message.text)
     await message.answer(
@@ -178,8 +178,7 @@ async def process_like_write_bots(message: Message, state: FSMContext, bot=Bot) 
                                  chat_id=-1001520768042)
 
     await state.clear()
-
-        
+    
 async def main() -> None:
     bot = Bot(token=TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
     await dp.start_polling(bot)
