@@ -1,4 +1,5 @@
 from aiogram import types
+from aiogram.fsm.state import State, StatesGroup
 
 def kb_create(*args):
     kb = [
@@ -19,3 +20,15 @@ def get_keyboard(text_button, link_button):
     buttons = [types.InlineKeyboardButton(text=text_button, url=link_button)],
     keyboard = types.InlineKeyboardMarkup(inline_keyboard=buttons)
     return keyboard
+
+class Form(StatesGroup):
+    choose_header = State()
+    text = State()
+    text_check = State()
+    finish = State()
+    link_url = State()
+    detele_datetime = State()
+    edit_new_text = State()
+    edit_new_link = State()
+    header_del = State()
+    edit_new_number = State()

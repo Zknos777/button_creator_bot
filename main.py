@@ -1,122 +1,56 @@
-import asyncio, logging, sys, json
-from aiogram.utils.i18n import gettext as _
-from utils import kb_create, get_keyboard
-from aiogram import Bot, Dispatcher, html, types, F
-from aiogram.client.default import DefaultBotProperties
-from aiogram.enums import ParseMode
-from aiogram.filters import CommandStart
-from aiogram.fsm.context import FSMContext
-from aiogram.filters.command import Command
-from aiogram.fsm.state import State, StatesGroup
-from aiogram.types import Message
+import asyncio, json, logging, sys
+from datetime import datetime
+from builtins import str
 from aiogram.utils.keyboard import ReplyKeyboardBuilder
-from aiogram import Router
+from aiogram import Bot, Dispatcher, html, F
+from aiogram.client.default import DefaultBotProperties
+from aiogram.fsm.context import FSMContext
+from aiogram.enums import ParseMode
+from aiogram.filters import CommandStart, Command, StateFilter
+from aiogram.fsm.state import default_state
 from aiogram.types import Message
+from utils import *
+import psycopg2
 
-logger = logging.getLogger(__name__)
-router: Router = Router(name="start")
-
-# headers = {"1": ("Shapochka 1", "Text_knopki1"),
-#            "2": ("Shapochka 2 gde est odin i tot je text!", "Text_knopki2"),
-#            "3": ("Shapochka 3 gde toje est odin i tot je text!", "Text_knopki3"),
-#            "4": ("Shapochka 4", "Text_knopki4"),
-#            "5": ("Shapochka 5 gde est odin i tot je text!", "Text_knopki5"),
-#            "6": ("Shapochka 6 gde toje est odin i tot je text!", "Text_knopki6"),
-#            "7": ("Shapochka 7", "Text_knopki7"),
-#            "8": ("Shapochka 8 gde est odin i tot je text!", "Text_knopki8"),
-#            "9": ("Shapochka 9 gde toje est odin i tot je text!", "Text_knopki9"),
-#            "10": ("Shapochka 10", "Text_knopki10"),
-#            "11": ("Shapochka 11 gde est odin i tot je text!", "Text_knopki11"),
-#            "12": ("Shapochka 12 gde toje est odin i tot je text!", "Text_knopki12")
-#            }
-#
-#
-# with open('headers.json', 'w') as fp:
-#     json.dump(headers, fp, indent=6)
+connection = psycopg2.connect(database="posts",
+                        host="localhost",
+                        user="username",
+                        password="password",
+                        port=5432)
 
 
+cursor = connection.cursor()
+# cursor.execute("DROP TABLE Posts") ## очищаем таблицу
+# connection.commit()
+cursor.execute('''
+CREATE TABLE IF NOT EXISTS Posts (
+id SERIAL PRIMARY KEY,
+msg_text TEXT NOT NULL,
+msg_id TEXT NOT NULL,
+msg_chat_id TEXT NOT NULL,
+button_text TEXT NOT NULL,
+button_link TEXT NOT NULL,
+datetime_posted TEXT NOT NULL,
+datetime_to_delete TEXT NOT NULL
+)
+''')
+
+# Сохраняем изменения
+connection.commit()
+
+
+TOKEN = "6303536387:AAGctZGRKGqn-4-M8ww0yzUYnyNp079XOSY"
+admin_id = 1233498701            ## ID admin
+first_group_id =  -1002491824558 #-1002098393146  ## ID first group
+second_group_id = -1002400799616 #-1001520768042 ## ID second group
+#TOKEN = "7411995656:AAGqJW5nYm8iDMhd-iQOd0WdK1Si3Auk79Q" ##Real Token!
+
+dp = Dispatcher()
 with open('headers.json', 'r') as fp:
     headers = json.load(fp)
 
-class Form(StatesGroup):
-    choose_header = State()
-    text = State()
-    finish = State()
-    link_url = State()
-    edit_new_text = State()
-    edit_new_link = State()
-    header_del = State()
-    edit_new_number = State()
-
-
-@router.message(CommandStart())
-async def start_handler(message: types.Message) -> None:
-    """Welcome message."""
-    await message.answer(_("first message"))
-@router.message(Command("stop"))
-async def stop(message: Message, state: FSMContext):
-    await state.clear()
-
-@router.message(Command("edit")) ## Изменние шапки и текста
-async def edit_header(message: Message, state: FSMContext):
-    builder = ReplyKeyboardBuilder()
-    for key in list(headers.keys()):  ## Все кнопки из ключей в словаре
-        builder.add(types.KeyboardButton(text=str(key)))
-    builder.adjust(4)  # делаем по 4 кнопки на строку
-    await message.answer(
-        "Выбери шапку сообщений для изменения!",
-        reply_markup=builder.as_markup(resize_keyboard=True),
-    )
-    await state.set_state(Form.edit_new_number)
-
-@router.message(CommandStart())
-async def command_start(message: Message, state: FSMContext) -> None:
-    builder = ReplyKeyboardBuilder()
-    for key in list(headers.keys()): ## Все кнопки из ключей в словаре
-        builder.add(types.KeyboardButton(text=str(key)))
-    builder.adjust(4) #делаем по 4 кнопки на строку
-    await message.answer(
-        "Привет. Выбери шапку сообщений!",
-        reply_markup=builder.as_markup(resize_keyboard=True),
-    )
-    await state.set_state(Form.text)
-
-
-@router.message(Form.text)
-async def process_name(message: Message, state: FSMContext) -> None:
-    await state.update_data(header=message.text)
-    await message.answer(
-        f"Отлично, {html.quote(message.text)}!\nКакой текст соообщения?",
-        reply_markup=types.ReplyKeyboardRemove()
-    )
-    await state.set_state(Form.link_url)
-
-
-@router.message(Form.link_url)
-async def process_like_write_bots(message: Message, state: FSMContext) -> None:
-    await state.update_data(text=message.text)
-    await message.reply("Укажите адресс ссылки")
-    await state.set_state(Form.finish)
-
-
-@router.message(Form.finish)
-async def process_like_write_bots(message: Message, state: FSMContext) -> None:
-    await state.update_data(link_url=message.text)
-    await message.reply("Готово всё!")
-    data = await state.get_data()
-    await message.answer(f'{headers[str(data["header"])][0]}\n{data["text"]}',
-                         reply_markup = get_keyboard(headers[str(data["header"])][1], data["link_url"]))
-    ###постинг и автоудаление
-    name_group = -1002182879621 ## ID group
-    msg = await bot.send_message(text=f'{headers[str(data["header"])][0]}\n{data["text"]}',
-                                reply_markup = get_keyboard(headers[str(data["header"])][1], data["link_url"]),
-                                chat_id=name_group)
-    await asyncio.sleep(20) ## timeout of delete message
-    await msg.delete() ### удаляет сообщение
-    await state.clear()
-
-
-@router.message(Command("del"))
+############ DELETE HEADER #########
+@dp.message(F.from_user.id.in_({5782652783, 1233498701}), Command("del"))
 async def delete_header(message: Message, state: FSMContext):
     builder = ReplyKeyboardBuilder()
     for key in list(headers.keys()):  ## Все кнопки из ключей в словаре
@@ -127,7 +61,7 @@ async def delete_header(message: Message, state: FSMContext):
     await state.set_state(Form.header_del)
 
 
-@router.message(Form.header_del)
+@dp.message(Form.header_del)
 async def delete_header_handler(message: Message, state: FSMContext) -> None:
     if message.text in headers.keys():
         del headers[str(message.text)]
@@ -140,12 +74,8 @@ async def delete_header_handler(message: Message, state: FSMContext) -> None:
         await state.clear()
 
 
-# @router.message(Command("new"))
-# async def create_header(message: Message):
-#     await message.answer("Введите текст новой шапки")
-
-
-@router.message(Command("edit")) ## Изменние шапки и текста
+############ EDIT HEADER #########
+@dp.message(F.from_user.id.in_({5782652783, 1233498701}), Command("edit")) ## Изменние шапки и текста
 async def edit_header(message: Message, state: FSMContext):
     builder = ReplyKeyboardBuilder()
     for key in list(headers.keys()):  ## Все кнопки из ключей в словаре
@@ -157,20 +87,21 @@ async def edit_header(message: Message, state: FSMContext):
     )
     await state.set_state(Form.edit_new_number)
 
-@router.message(Form.edit_new_number)
+@dp.message(Form.edit_new_number)
 async def edit_header_handler(message: Message, state: FSMContext) -> None:
     await state.update_data(edit_new_number=message.text)
     await message.reply("Укажите новый текст шапки")
     await state.set_state(Form.edit_new_text)
 
 
-@router.message(Form.edit_new_text)
+@dp.message(Form.edit_new_text)
 async def edit_header_handler(message: Message, state: FSMContext) -> None:
     await state.update_data(edit_new_text=message.text)
     await message.reply("Укажите новый текст кнопки")
     await state.set_state(Form.edit_new_link)
 
-@router.message(Form.edit_new_link)
+
+@dp.message(Form.edit_new_link)
 async def edit_header_handler(message: Message, state: FSMContext) -> None:
         await state.update_data(edit_new_link=message.text)
         await state.set_state(Form.edit_new_link)
@@ -183,24 +114,103 @@ async def edit_header_handler(message: Message, state: FSMContext) -> None:
         print(headers.items())
 
 
+############ STOP COMMAND #########
+@dp.message(F.from_user.id.in_({5782652783, 1233498701}), Command("stop"), ~StateFilter(default_state))
+async def stop(message: Message, state: FSMContext):
+    await message.answer("Остановлено!", reply_markup=types.ReplyKeyboardRemove())
+    await state.clear()
 
-async def main():
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(filename)s:%(lineno)d #%(levelname)-8s "
-        "[%(asctime)s] - %(name)s - %(message)s",
+
+############ START COMMAND #########
+@dp.message(F.from_user.id.in_({5782652783, 1233498701}), CommandStart())
+async def command_start_handler(message: Message, state: FSMContext) -> None:
+    await message.answer(f"Hello, {html.bold(message.from_user.full_name)}!")
+    builder = ReplyKeyboardBuilder()
+    for key in list(headers.keys()): ## Все кнопки из ключей в словаре
+        builder.add(types.KeyboardButton(text=str(key)))
+    builder.adjust(4) #делаем по 4 кнопки на строку
+    await message.answer(
+        "Привет. Выбери шапку сообщений!",
+        reply_markup=builder.as_markup(resize_keyboard=True),
     )
+    await state.set_state(Form.text)
 
-    logger.info("Starting bot")
-    bot: Bot = Bot(token="7411995656:AAGqJW5nYm8iDMhd-iQOd0WdK1Si3Auk79Q")
-    dp: Dispatcher = Dispatcher()
 
-    await bot.delete_webhook(drop_pending_updates=True)
+@dp.message(Form.text)
+async def process_name(message: Message, state: FSMContext) -> None:
+    ##Проверка на правильность выбора шапки
+    if not message.text in list(headers.keys()):
+        await message.answer("Выберите шапку из предложенных!")
+        return
+
+    await state.update_data(header=message.text) ## записываем в память выбранную шапку
+    await message.answer(
+            f"Отлично, {html.quote(message.text)}!\nУкажите текст соообщения?",
+            reply_markup=types.ReplyKeyboardRemove()
+            )
+    await state.set_state(Form.link_url)
+
+
+@dp.message(Form.link_url)
+async def process_like_write_bots(message: Message, state: FSMContext) -> None:
+    await state.update_data(text=message.text)
+    await message.reply("Укажите адрес ссылки?")
+    await state.set_state(Form.detele_datetime)
+
+
+@dp.message(Form.detele_datetime)
+async def process_like_write_bots(message: Message, state: FSMContext) -> None:
+    await state.update_data(link_url=message.text)
+    await message.reply("Укажите дату и время удаление в формате 21.10.2024 16:59?")
+    await state.set_state(Form.finish)
+
+
+@dp.message(Form.finish)
+async def process_like_write_bots(message: Message, state: FSMContext, bot=Bot) -> None:
+    ##Проверка на правильность даты
+    if not datetime.strptime(message.text, "%d.%m.%Y %H:%M") >= datetime.today():
+        await message.answer("Указанная дата имеет неправильный формат!")
+        return
+
+    await state.update_data(detele_datetime=message.text)
+    await message.reply("Готово всё!")
+    data = await state.get_data()
+    await message.answer(f'{headers[str(data["header"])][0]}\n{data["text"]}',
+                         reply_markup = get_keyboard(headers[str(data["header"])][1], data["link_url"]))
+    ###постинг и автоудаление
+    msg = await bot.send_message(text=f'{headers[str(data["header"])][0]}\n{data["text"]}',
+                                reply_markup = get_keyboard(headers[str(data["header"])][1], data["link_url"]),
+                                chat_id=first_group_id)
+    msg_text, msg_id, msg_chat_id, button_text, button_link = (msg.text, msg.message_id, str(msg.chat.id)[1:],
+                                                               msg.reply_markup.inline_keyboard[0][0].text,
+                                                               msg.reply_markup.inline_keyboard[0][0].url)
+    print(msg_text, msg_id, msg_chat_id, button_text, button_link)
+    date_to_delete = datetime.strptime(str(data["detele_datetime"]), "%d.%m.%Y %H:%M")
+    #Записываем все данные этого сообщения в БД
+    cursor.execute('INSERT INTO Posts (msg_text, msg_id, msg_chat_id, button_text, button_link, datetime_posted, datetime_to_delete) VALUES (%s, %s, %s, %s, %s, %s, %s)',
+                   (msg_text, msg_id, msg_chat_id, button_text, button_link, str(msg.date), str(date_to_delete)))
+    connection.commit()
+
+    #
+    # await asyncio.sleep(int(data["timer"])*60) ## timeout of delete message
+    # if int(data["timer"])*60 < 7200:
+    #     await msg.delete() ### удаляет сообщение
+    # else:
+    #     ## Если более 48 часов то пишет сообщение о том, что нужно удалить сообщение
+    #     await bot.send_message(text=f"Удали сообщение! https://t.me/c/{str(msg.chat.id)[4:]}/{msg.message_id}",
+    #                            chat_id=1233498701)
+    # ##posting second group
+    # await bot.send_message(text=f'{headers[str(data["header"])][0]}\n{data["text"]}',
+    #                              reply_markup=get_keyboard(headers[str(data["header"])][1], data["link_url"]),
+    #                              chat_id=second_group_id)
+
+    await state.clear()
+    
+async def main() -> None:
+    bot = Bot(token=TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
     await dp.start_polling(bot)
 
 
 if __name__ == "__main__":
-    try:
-        asyncio.run(main())
-    except (KeyboardInterrupt, SystemExit):
-        logger.info("Bot stopped")
+    logging.basicConfig(level=logging.INFO, stream=sys.stdout)
+    asyncio.run(main())
