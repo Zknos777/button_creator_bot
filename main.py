@@ -39,11 +39,14 @@ datetime_to_delete TEXT NOT NULL
 connection.commit()
 
 
-TOKEN = "6303536387:AAGctZGRKGqn-4-M8ww0yzUYnyNp079XOSY"
+#TOKEN = "6303536387:AAGctZGRKGqn-4-M8ww0yzUYnyNp079XOSY" ##TEST token
+#first_group_id =  -1002491824558                         ## TEST ID first group
+#second_group_id = -1002400799616                         ## TEST ID second group
 admin_id = 1233498701            ## ID admin
-first_group_id =  -1002491824558 #-1002098393146  ## ID first group
-second_group_id = -1002400799616 #-1001520768042 ## ID second group
-#TOKEN = "7411995656:AAGqJW5nYm8iDMhd-iQOd0WdK1Si3Auk79Q" ##Real Token!
+
+first_group_id =  -1002098393146                         ##REAL ID first group
+second_group_id = -1001520768042                         ##REAL ID second group
+TOKEN = "7411995656:AAGqJW5nYm8iDMhd-iQOd0WdK1Si3Auk79Q" ##REAL Token!
 
 dp = Dispatcher()
 with open('headers.json', 'r') as fp:
@@ -190,20 +193,6 @@ async def process_like_write_bots(message: Message, state: FSMContext, bot=Bot) 
     cursor.execute('INSERT INTO Posts (msg_text, msg_id, msg_chat_id, button_text, button_link, datetime_posted, datetime_to_delete) VALUES (%s, %s, %s, %s, %s, %s, %s)',
                    (msg_text, msg_id, msg_chat_id, button_text, button_link, str(msg.date), str(date_to_delete)))
     connection.commit()
-
-    #
-    # await asyncio.sleep(int(data["timer"])*60) ## timeout of delete message
-    # if int(data["timer"])*60 < 7200:
-    #     await msg.delete() ### удаляет сообщение
-    # else:
-    #     ## Если более 48 часов то пишет сообщение о том, что нужно удалить сообщение
-    #     await bot.send_message(text=f"Удали сообщение! https://t.me/c/{str(msg.chat.id)[4:]}/{msg.message_id}",
-    #                            chat_id=1233498701)
-    # ##posting second group
-    # await bot.send_message(text=f'{headers[str(data["header"])][0]}\n{data["text"]}',
-    #                              reply_markup=get_keyboard(headers[str(data["header"])][1], data["link_url"]),
-    #                              chat_id=second_group_id)
-
     await state.clear()
     
 async def main() -> None:
