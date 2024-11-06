@@ -11,10 +11,20 @@ services:
     volumes:
       - /var/lib/viza/pg_data:/var/lib/postgresql/data
     ports:
-      - "${DB_PORT}:5432"
+      - ${DB_PORT}:5432
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER"]
       interval: 5s
       timeout: 5s
       retries: 5
     restart: always
+  bot:
+      command: "python3 main.py"
+      env_file: .env
+      build: .
+      restart: always
+  background:
+      env_file: .env
+      build: .
+      command: "python3 background_message_viewer.py"
+      restart: always
